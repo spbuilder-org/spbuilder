@@ -1,9 +1,10 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const fs = require('node:fs');
 const ctx = vm.createContext({});
-vm.runInContext(fs.readFileSync(require.resolve('../runtime/page-flow.js'), 'utf8'), ctx);
+const template = require('../src/assets/qsfTemplate.json');
+const source = template.SurveyElements.find(e => e.PrimaryAttribute === 'QID2').Payload.QuestionJS;
+vm.runInContext(source.slice(0, source.indexOf('/**\n * @typedef')), ctx);
 const { createPoolSampler, evaluatePageCondition, createPageFlowRunner, exportPageRecords } = ctx;
 function pool(size, content) { return { shuffledIndexes: Array(size).fill(0), items: [{ type: 'text', content }] }; }
 function clock() {

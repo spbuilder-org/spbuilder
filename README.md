@@ -78,13 +78,23 @@ Opening old concurrent settings in the editor initializes equivalent per-page co
 
 ### Runtime maintenance and checks
 
-`runtime/trial.js` is the legacy runtime plus the page-mode adapter;
-`runtime/page-flow.js` separates pool selection policy, count consumption, recursive
-conditions, page scheduling, and record export. A selection policy receives candidates
-with their remaining counts, allowing future weighted selection without changing the
-page editor or inventory logic. Both files are embedded into QSF by
-`npm run sync:runtime`; the build checks that the embedded script is up to date.
-The unchanged load/priming runtime remains embedded in the template.
+Runtime source is maintained in the separate `amp-qualtrics` repository:
+`src/load.js` and `src/trial.js`. The entire `trial.js` is ready to paste into
+Qualtrics; its sampling policy, inventory, conditions, and page scheduling are
+separate functions within that file. SP-Builder does not maintain another runtime
+source copy or automatically rewrite the QSF template.
+
+Keep the manual release workflow:
+
+1. Edit `amp-qualtrics/src/load.js` and/or `src/trial.js`.
+2. Prepare the template experiment in Qualtrics (one-time setup).
+3. Paste the complete scripts into the template questions and test the experiment.
+4. Export the experiment as QSF and replace `src/assets/qsfTemplate.json` here.
+
+Run `npm run test:runtime` in `amp-qualtrics` to test the source and in SP-Builder
+to test the imported QSF scripts. Tests do not write back to the template. The
+current STML-29 candidate template was assembled locally during development; it
+still needs testing and a fresh export from the Qualtrics template experiment.
 
 Use Node 20+ for `npm run test:runtime`. These tests include the actual generated QSF
 load/trial scripts in a Qualtrics API test harness, legacy behavior, two rounds,
