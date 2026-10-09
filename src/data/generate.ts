@@ -1,6 +1,7 @@
 import type { AmpParams, AmpStimuliPrimeItem, AmpTimeline } from './ampTypes';
+import { buildPageFlow, pageFlowErrors } from './pageFlow';
 import qsfTemplate from '../assets/qsfTemplate.json';
-import { getCDUniversalLayout, getIndexInLayoutByRowCol, renderTrialHtml } from './renderTrialHtml';
+import { renderTrialHtml } from './renderTrialHtml';
 import { type UidDetail, getDisplayKey, getUidDetail, map2d } from '../util/util';
 
 interface EmbeddedDataTemplate {
@@ -10,14 +11,17 @@ interface EmbeddedDataTemplate {
   Value?: string;
 }
 export function hydrateQsf(params: AmpParams) {
-  const template = qsfTemplate;
+  const errors = pageFlowErrors(params);
+  if (errors.length) throw new Error(errors.join('\n'));
+  const template = JSON.parse(JSON.stringify(qsfTemplate)) as typeof qsfTemplate;
 
   // Set embedded data
 
   /* @ts-ignore */
   const embeddedData = template.SurveyElements[1].Payload.Flow[0].EmbeddedData as EmbeddedDataTemplate[];
   function setEd(name: string, value: any) {
-    const ed = embeddedData.find(ed => ed.Field === name);
+    let ed = embeddedData.find(ed => ed.Field === name);
+    if (!ed) { ed = { Description: name, Field: name, Type: 'Custom' }; embeddedData.push(ed); }
     if (ed) {
       if (value === null) {
         ed.Type = 'Recipient';
@@ -39,7 +43,10 @@ export function hydrateQsf(params: AmpParams) {
   }];
   setEd('stimuliItems', stimuliItems);
   setEd('totalRounds', params.totalRounds);
-  setEd('timeline', { ...params.timeline, concurrentDisplays: transformConcurrentDisplays(params.timeline.concurrentDisplays) });
+  const { pageSettings, ...timeline } = params.timeline;
+  const pageFlow = buildPageFlow(params);
+  setEd('timeline', { ...timeline, concurrentDisplays: transformConcurrentDisplays(timeline.concurrentDisplays), pageFlow });
+  if (pageFlow) { setEd('sptPageDataVersion', '1'); setEd('sptPageResults', null); }
   setEd('primes', exportPrime(params));
   setEd('acceptedKeys', params.acceptedKeys.join(','));
   setEd('darkMode', params.trialHtml.darkMode);

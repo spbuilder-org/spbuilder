@@ -38,7 +38,8 @@ export interface AmpTrialHtml {
   text?: string; // use instruction
 }
 
-export type ConcurrentDisplayFrame = (number | 'empty')[][]; // [row][column]; 'empty' will map to -1; also called 'frame' in larger context
+export type PoolChoice = number | number[] | 'empty';
+export type ConcurrentDisplayFrame = PoolChoice[][]; // [row][column]; 'empty' will map to -1; also called 'frame' in larger context
 export type DisplayLayout = number[];
 
 export interface AmpTimeline {
@@ -47,6 +48,7 @@ export interface AmpTimeline {
   delayAfterKeyboard: number,
   autoProceedTimeout: number | null,
   concurrentDisplays?: ConcurrentDisplayFrame[],
+  pageSettings?: PageSettings[],
 }
 
 export interface AmpParams {
@@ -57,4 +59,25 @@ export interface AmpParams {
   totalTrials: number;
   totalRounds: number;
   trialHtml: AmpTrialHtml;
+}
+
+/** Recursive model; UI edits immutable subtrees instead of mutating generic tree nodes. */
+export type PageCondition =
+  | { type: 'group'; operator: 'and' | 'or'; children: PageCondition[] }
+  | { type: 'response'; pageId: string; operator: 'eq' | 'neq'; values: string[] }
+  | { type: 'pool'; pageId: string; position: string; operator: 'eq' | 'neq'; values: number[] };
+
+export interface PageSettings {
+  id: string;
+  name: string;
+  condition?: PageCondition;
+  response: {
+    mode: 'keyboard' | 'timeout';
+    keys: string[];
+    duration: number;
+    timeout: number | null;
+    delayBefore: number;
+    delayAfter: number;
+  };
+  interval: number;
 }

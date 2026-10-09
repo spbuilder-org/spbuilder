@@ -1,10 +1,14 @@
 import { Alert } from '@arco-design/web-react';
 import React from 'react';
 import { AmpParams } from '../data/ampTypes';
+import { choicePools } from '../data/pageFlow';
 import { sumBy } from 'lodash';
 
 export const WarnTotalTrials: React.FC<{ values: AmpParams }> = ({ values }) => {
 
+  if (values.timeline.concurrentDisplays && (values.timeline.pageSettings?.some(p => p.condition) || values.timeline.concurrentDisplays.some(frame => frame.some(row => row.some(cell => choicePools(cell).length > 1))))) {
+    return <Alert type='info' content='Pool usage depends on page conditions and random draws, so the trial count cannot be guaranteed from pool sizes. Empty pools are skipped during selection; a position is blank if all its pools are exhausted. Actual draws and page responses are saved in sptPageResults. The built-in legacy data analysis does not support this format.' />;
+  }
   let usageOfEachPool: number[];
   if (values.timeline.concurrentDisplays) {
     // copied from trial.js
@@ -12,8 +16,8 @@ export const WarnTotalTrials: React.FC<{ values: AmpParams }> = ({ values }) => 
     for (const elementPoolMapping of values.timeline.concurrentDisplays) {
       for (const row of elementPoolMapping) {
         for (const col of row) {
-          if (typeof col === 'number') {
-            usageOfEachPool[col] += 1;
+          for (const pool of choicePools(col)) {
+            if (pool >= 0 && pool < usageOfEachPool.length) usageOfEachPool[pool] += 1;
           }
         }
       }

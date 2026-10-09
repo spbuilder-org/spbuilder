@@ -1,5 +1,6 @@
 import { Form, Tabs } from '@arco-design/web-react';
 import React, { useState } from 'react';
+import { remapTimelinePools } from '../data/pageFlow';
 import type { AmpStimuli } from '../data/ampTypes';
 import { uid } from '../data/uid';
 import { StimuliImage } from './stimuliImage';
@@ -40,6 +41,7 @@ const DraggableTitle = <T,>({ dragPayload, ondragstart, ondrop, children }: Drag
 
 export const StimuliPool: React.FC = () => {
 
+  const { form } = Form.useFormContext();
   const [activeStimuliTab, setActiveStimuliTab] = useState(0);
   const newStimuli: AmpStimuli = {
     items: [{ type: 'text', content: '', count: 1, uid: uid() }],
@@ -59,6 +61,7 @@ export const StimuliPool: React.FC = () => {
             onDeleteTab={tabKeyStr => {
               const tabKey = parseInt(tabKeyStr);
               if (window.confirm(`⚠️⚠️⚠️ Are you sure to delete Stimuli Pool ${tabKey + 1} and all its primings completely?`)) {
+                form.setFieldValue('timeline', remapTimelinePools(form.getFieldValue('timeline'), i => i === tabKey ? -1 : i > tabKey ? i - 1 : i));
                 remove(tabKey);
                 if (fields.length === 1) { // keep at least one tab
                   add({ ...newStimuli });
@@ -74,7 +77,12 @@ export const StimuliPool: React.FC = () => {
                   <DraggableTitle
                     dragPayload={index}
                     ondragstart={setActiveStimuliTab}
-                    ondrop={payload => { move(payload, index); setActiveStimuliTab(index); }}>
+                    ondrop={payload => {
+                      const order = fields.map((_, i) => i);
+                      order.splice(index, 0, order.splice(payload, 1)[0]);
+                      form.setFieldValue('timeline', remapTimelinePools(form.getFieldValue('timeline'), i => order.indexOf(i)));
+                      move(payload, index); setActiveStimuliTab(index);
+                    }}>
                     Stimuli Pool {index + 1}
                   </DraggableTitle>
                 }>

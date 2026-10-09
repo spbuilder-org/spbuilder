@@ -1,4 +1,4 @@
-import { Collapse, Form, InputNumber, type FormInstance, Tooltip, Space } from '@arco-design/web-react';
+import { Alert, Collapse, Form, InputNumber, type FormInstance, Tooltip, Space } from '@arco-design/web-react';
 import throttle from 'lodash/throttle';
 import React, { useEffect, useRef, useState } from 'react';
 import type { AmpParams } from '../data/ampTypes';
@@ -23,16 +23,24 @@ const { Item } = Form;
 
 const DownloadButton: React.FC<{ values?: AmpParams }> = ({ values }) => {
   const [url, setUrl] = useState<string>();
+  const [error, setError] = useState<string>();
   const blobUrl = useBlobUrl();
   const throttledSetBlob = useRef<(values?: AmpParams) => void>();
   if (!throttledSetBlob.current) {
     throttledSetBlob.current = throttle((values?: AmpParams) => {
       if (values) {
-        setUrl(blobUrl(generateBlob(generateQsfString(values))))
+        try {
+          setUrl(blobUrl(generateBlob(generateQsfString(values))));
+          setError(undefined);
+        } catch (e) {
+          setUrl(undefined); setError(String(e instanceof Error ? e.message : e));
+        }
       }
     }, 500, { leading: true, trailing: true });
   }
-  useEffect(() => throttledSetBlob.current?.(values), [values]);
+  useEffect(() => { setUrl(undefined); throttledSetBlob.current?.(values); }, [values]);
+  useEffect(() => () => (throttledSetBlob.current as any)?.cancel(), []);
+  if (error) return <Alert type='error' title='Cannot generate QSF yet' content={error} />;
   return (
     <BubblyButton href={url} download='spt-generator.qsf'>
       <Space>
@@ -86,6 +94,7 @@ export const MainForm: React.FC<{}> = ({ }) => {
             {values => <WarnTotalTrials values={values} />}
           </Item>
           <MultiRounds />
+          <Item shouldUpdate noStyle>{values => !values.timeline?.pageSettings ? <>
           <Item
             label={
               <>
@@ -103,6 +112,7 @@ export const MainForm: React.FC<{}> = ({ }) => {
           <Item field='timeline.autoProceedTimeout'>
             <AutoProceedTimeout />
           </Item>
+          </> : null}</Item>
         </span>
 
         <Collapse bordered={false} style={{ marginBottom: 20 }}>

@@ -2,12 +2,24 @@ import { Button, Form, Grid, Modal, Select, Tag } from '@arco-design/web-react';
 import useWatch from '@arco-design/web-react/es/Form/hooks/useWatch';
 import { IconEdit } from '@arco-design/web-react/icon';
 import React from 'react';
-import type { AmpStimuli, ConcurrentDisplayFrame } from '../data/ampTypes';
+import type { AmpStimuli, ConcurrentDisplayFrame, PoolChoice } from '../data/ampTypes';
 import { AddRemoveButtons } from './addRemoveButtons';
 import useFormContext from '@arco-design/web-react/es/Form/hooks/useContext';
+import { choicePools } from '../data/pageFlow';
 import { getDisplayKey } from '../util/util';
 
-const ROW_HEIGHT = 100;
+const ROW_HEIGHT = 135;
+
+function PoolMultiSelect({ field, options, label }: { field: string; options: { label: string; value: string | number }[]; label: string }) {
+  const { form } = Form.useFormContext();
+  const value = Form.useWatch(field, form) as PoolChoice | undefined;
+  return <>
+    <Select aria-label={label} mode='multiple' placeholder={value === 'empty' ? 'Blank' : 'Choose pools'}
+      options={options} value={choicePools(value ?? 'empty')} style={{ width: 138 }}
+      onChange={next => form.setFieldValue(field, next)} />
+    <Button size='mini' type='text' onClick={() => form.setFieldValue(field, 'empty')}>Blank</Button>
+  </>;
+}
 
 const { Row, Col } = Grid;
 
@@ -27,9 +39,8 @@ const ContentPoolSelector: React.FC<{ field: string, rowIndex: number, colIndex:
     <div style={{ display: 'inline-block', width: 140, height: ROW_HEIGHT - margin * 2, margin: margin, border: '1px solid grey', backgroundColor: 'white' }}>
       <Tag color='orange' bordered>{getDisplayKey(rowIndex, colIndex)}</Tag>
 
-      <Form.Item field={field}>
-        <Select options={options} style={{ width: 140 }} />
-      </Form.Item>
+      <PoolMultiSelect field={field} options={options.filter(o => o.value !== 'empty')} label={`Pools for ${getDisplayKey(rowIndex, colIndex)}`} />
+
     </div>
   )
 }
@@ -42,14 +53,14 @@ export const ConcurrentDisplayFrameEditor: React.FC<{ field: string }> = ({ fiel
   const { form } = useFormContext();
   const layout = useWatch(field, form) as ConcurrentDisplayFrame;
   const textPreview = layout?.map(row => {
-    const colTexts = row.map(c => typeof c === 'number' ? `Pool${c + 1}` : c);
+    const colTexts = row.map(c => c === 'empty' ? 'blank' : choicePools(c).map(p => p < 0 ? 'Removed pool' : `Pool${p + 1}`).join(' / ') || 'Choose pools');
     return `[${colTexts.join(', ')}]`;
   }).join(' / ');
 
   return (
     <span>
       Stimuli Pools: {textPreview}
-      <Button type='text' icon={<IconEdit style={{ color: 'rgb(var(--orange-6))' }} />} onClick={() => setIsModalVisible(true)} />
+      <Button aria-label='Edit display layout' type='text' icon={<IconEdit style={{ color: 'rgb(var(--orange-6))' }} />} onClick={() => setIsModalVisible(true)} />
       <Modal
 
         title='Display Layout'
@@ -60,7 +71,7 @@ export const ConcurrentDisplayFrameEditor: React.FC<{ field: string }> = ({ fiel
         style={{ minWidth: '70vw' }}
       >
         <p>You can customize the number of rows, and the number of stimuli contents in each row.</p>
-        <p>If you select same stimuli pool twice, then two items will be picked from the pool. And the pool size should be {'>='} (2 * Number of total trials).</p>
+        <p>Each position draws one item. Multiple selected pools are equally likely while nonempty. Positions share the remaining counts of each pool across the round.</p>
         <span style={{ color: 'rgb(var(--orange-6))' }}>Trial Question Container</span>
         <Row>
           {/* Row items */}

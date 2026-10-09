@@ -10,6 +10,9 @@ export const processData = async (
     throw new Error('No data provided');
   }
 
+  if (data.some(row => String(row.sptPageDataVersion ?? '') === '1')) {
+    throw new Error('Concurrent/conditional page results are not supported by this legacy analysis. Use sptPageResults, which records the actual pools, items, responses and timings; shuffleResult is not a trial-to-stimulus mapping for these experiments.');
+  }
   let processedData = [...data];
 
   // Ensure ID exists

@@ -4,6 +4,7 @@ import useWatch from '@arco-design/web-react/es/Form/hooks/useWatch';
 import { cloneDeep, isEqual } from 'lodash';
 import React, { useEffect, useRef, useState } from 'react';
 import type { AmpParams, AmpTimeline, ConcurrentDisplayFrame } from '../data/ampTypes';
+import { choicePools } from '../data/pageFlow';
 import { renderTrialHtml } from '../data/renderTrialHtml';
 import { forEach2d, getDisplayKey, map2d } from '../util/util';
 import { StimuliThumbnail } from './stimuliThumbnail';
@@ -124,11 +125,11 @@ const ConcurrentPreviewSelector: React.FC<PreviewUidsSelector> = ({ previewUids,
                   onChange={uid => updateOneUid(rowIndex, colIndex, uid ?? 'empty')}
                 >
                   {
-                    col === 'empty' ? [] : stimuliWatch[col].items.map((item, itemIndex) => (
+                    choicePools(col).flatMap(poolIndex => (stimuliWatch[poolIndex]?.items ?? []).map((item, itemIndex) => (
                       <Option key={item.uid} value={item.uid}>
-                        <StimuliThumbnail {...item} indexDisplay={`${col + 1}-${itemIndex + 1}`} />
+                        <StimuliThumbnail {...item} indexDisplay={`${poolIndex + 1}-${itemIndex + 1}`} />
                       </Option>
-                    ))
+                    )))
                   }
                 </Select>
               </Form.Item>

@@ -5,8 +5,7 @@ import type { AmpStimuli, AmpTimeline, ConcurrentDisplayFrame } from '../data/am
 import { AddRemoveButtons } from './addRemoveButtons';
 import { ConcurrentDisplayFrameEditor } from './concurrentDisplayFrameEditor';
 import { addToList, removeFromList } from '../util/formUtil';
-import { AcceptedKeys } from './acceptedKeys';
-import { AutoProceedTimeout } from './autoProceedTimeout';
+import { PageTimeline } from './pageTimeline';
 import { forEach2d } from '../util/util';
 
 const { Item } = Form;
@@ -68,19 +67,21 @@ export const Timeline: React.FC = () => {
       // For concurrent display, update display to empty when stimuli pool is deleted
       concurrentDisplaysWatch!.forEach((frame, frameIndex) => {
         forEach2d(frame, (displayItem, row, col) => {
-          if (typeof displayItem === 'number' && displayItem >= stimuliWatch.length) {
+          if (!timelineWatch.pageSettings && typeof displayItem === 'number' && displayItem >= stimuliWatch.length) {
             form.setFieldValue(`timeline.concurrentDisplays[${frameIndex}][${row}][${col}]`, 'empty');
           }
         })
       });
     }
-  }, [concurrentDisplaysWatch, isConcurrentDisplaysEnabled, form, stimuliWatch.length]);
+  }, [concurrentDisplaysWatch, isConcurrentDisplaysEnabled, form, stimuliWatch.length, timelineWatch.pageSettings]);
 
   const onConcurrentDisplaysSwitchChange = (isConcurent: boolean) => {
     if (isConcurent) {
       const compatibleElementPoolMapping: ConcurrentDisplayFrame[] = stimuliWatch.map((v, index) => [[index]]);
       form.setFieldValue('timeline.concurrentDisplays', compatibleElementPoolMapping);
     } else {
+      if (timelineWatch.pageSettings && !window.confirm('Turning this off clears the custom pages and conditions. Continue?')) return;
+      form.setFieldValue('timeline.pageSettings', undefined);
       resizeDurationsAndIntervalsArray(form, stimuliWatch.length);
       form.setFieldValue('timeline.concurrentDisplays', undefined);
       form.setFieldValue('trialHtml.concurrentLayout', 'row');
@@ -98,11 +99,18 @@ export const Timeline: React.FC = () => {
     removeFromList(form, 'timeline.concurrentDisplays');
   }
 
+  if (isConcurrentDisplaysEnabled) return (
+    <Card style={{ textAlign: 'start' }}>
+      <Space><Switch checked onChange={onConcurrentDisplaysSwitchChange} />Enable concurrent/conditional stimuli display</Space>
+      <PageTimeline />
+    </Card>
+  );
+
   return (
     <Card style={{ textAlign: 'start' }}>
       <Space>
         <Switch checked={isConcurrentDisplaysEnabled} onChange={onConcurrentDisplaysSwitchChange} />
-        Enable concurrent stimuli display
+        Enable concurrent/conditional stimuli display
         <Tooltip content={<>
           Normally, in one trial, stimuli items are displayed sequentially, one item from each stimuli pool.
           But after enabling concurrent stimuli display, you can display more than one item simultaneously from multiple stimuli pools.

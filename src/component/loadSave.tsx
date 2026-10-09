@@ -31,6 +31,7 @@ export const LoadSave = () => {
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return; // file selector aborted
+    e.currentTarget.value = ''; // Allow loading the same settings file again after editing.
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -38,6 +39,7 @@ export const LoadSave = () => {
         if (content) {
           const values = JSON.parse(content).values;
           transformOldValues(values);
+          form.resetFields();
           form.setFieldsValue(values);
           Message.success('Loaded successfully. 🎉');
         } else {
@@ -68,7 +70,7 @@ export const LoadSave = () => {
           {values => <SaveSettingsButton values={values} />}
         </Item>
         <Button type='outline' icon={<IconPaste />} onClick={
-          () => window.confirm('⚠️⚠️⚠️ This will overwrite all settings. Continue?') && form.setFieldsValue(getExampleAmpParams())
+          () => { if (window.confirm('⚠️⚠️⚠️ This will overwrite all settings. Continue?')) { form.resetFields(); form.setFieldsValue(getExampleAmpParams()); } }
         }>
           Use Example Settings
         </Button>
