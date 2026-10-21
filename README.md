@@ -66,15 +66,34 @@ skipped or exhausted references are unknown, including for `is not` comparisons.
 For insect/flower feedback, configure the error page as OR of two AND groups:
 `(source = insect AND response != d) OR (source = flower AND response != k)`.
 
-QSF exports are self-contained. New page mode adds `sptPageDataVersion=1` and
-`sptPageResults`: rounds → trials → stable page IDs → status, response, duration,
-and per-position draws. Output pool/item numbers are one-based. Each draw records
-`drawn`, `blank`, or `exhausted`; pages record `completed` or `skipped`. `TIMEOUT` is
-an explicit page response. Existing trial response fields retain the first completed
-keyboard page's response/time. The built-in legacy data analysis rejects page-mode
-exports because its shuffle-order-to-trial assumption does not apply; analyze actual
-`sptPageResults` instead. Old settings without page settings retain the legacy runtime.
-Opening old concurrent settings in the editor initializes equivalent per-page controls.
+Input ED uses Stimulize's `timeline: {advanced: true, pages: [...]}` schema,
+including recursive array conditions and one-based page/pool references. Editor
+page IDs remain internal. See [the complete input ED example](examples/insect-flower.input-ed.json)
+and [importable editor settings](examples/insect-flower.settings.json). This example
+uses two trials per round and two rounds, with a third pool containing 500 ms error feedback.
+
+Advanced results use the existing Stimulize ED fields, with no version field:
+
+- `sptResponsesArray` / `sptResponseDurationsArray`: JSON `[round][trial][page]`.
+  Skipped/unrun values are `null`; timed pages/timeouts respond `TIMEOUT`, with null RT.
+  Valid RT is milliseconds from keyboard activation, rounded to an integer string.
+- `sptResponses` / `sptResponseDurations`: pages separated by `/`, trials by `,`,
+  rounds by `;`. Empty slots stay empty. `sptResponsesUnreversed*` matches normal
+  responses because SP-Builder has no swap.
+- `sptPoolSelectionArray`: JSON `[round][trial][page] -> {position: pool}`.
+  Pool numbers are one-based; exhausted choices are null, blank/skipped positions absent.
+- `sptDisplayedPages`: displayed page numbers, using the same separators.
+
+Selected outputs and per-position item ED are deferred beyond STML-29. This subset
+does not use `selectedOutputs` or export `stimuliItem_*` fields. Internal draw records
+still support conditions; `sptPoolSelectionArray` records the source pool of each position.
+
+Results are saved at the end of each trial. The legacy data analysis rejects advanced
+results: use source-pool records and per-page responses instead of inferring trial
+stimuli from `shuffleResult`. Specific item identities are not exported in advanced mode.
+Simple mode retains the original two-dimensional results.
+Old concurrent settings retain the original concurrent editor. Switching to
+concurrent+conditional initializes equivalent per-page controls from those settings.
 
 ### Runtime maintenance and checks
 

@@ -1,5 +1,5 @@
 import type { AmpParams, AmpStimuliPrimeItem, AmpTimeline } from './ampTypes';
-import { buildPageFlow, pageFlowErrors } from './pageFlow';
+import { buildAdvancedTimeline, pageFlowErrors } from './pageFlow';
 import qsfTemplate from '../assets/qsfTemplate.json';
 import { renderTrialHtml } from './renderTrialHtml';
 import { type UidDetail, getDisplayKey, getUidDetail, map2d } from '../util/util';
@@ -15,6 +15,18 @@ export function hydrateQsf(params: AmpParams) {
   if (errors.length) throw new Error(errors.join('\n'));
   const template = JSON.parse(JSON.stringify(qsfTemplate)) as typeof qsfTemplate;
 
+  // Remove obsolete development ED declarations, including from a manually re-exported template.
+  const surveyFlow = template.SurveyElements.find(e => e.Element === 'FL')?.Payload as any;
+  function removeObsoleteFields(flow: any[]) {
+    flow.forEach(node => {
+      if (node.EmbeddedData) node.EmbeddedData = node.EmbeddedData.filter((ed: EmbeddedDataTemplate) =>
+        !['sptPageDataVersion', 'sptPageResults', 'selectedOutputs'].includes(ed.Field) &&
+        !/^stimuliItem_\d+_[A-Z]+\d+$/.test(ed.Field));
+      if (node.Flow) removeObsoleteFields(node.Flow);
+    });
+  }
+  removeObsoleteFields(surveyFlow.Flow);
+
   // Set embedded data
 
   /* @ts-ignore */
@@ -27,8 +39,10 @@ export function hydrateQsf(params: AmpParams) {
         ed.Type = 'Recipient';
         ed.Value = undefined; // Value field will be removed when stringify. That's how Qualtrics represents empty value.
       } else if (typeof value === 'object') {
+        ed.Type = 'Custom';
         ed.Value = JSON.stringify(value);
       } else {
+        ed.Type = 'Custom';
         ed.Value = `${value}`; // (undefined, true, false...) are parsed to strings
       }
     }
@@ -44,9 +58,12 @@ export function hydrateQsf(params: AmpParams) {
   setEd('stimuliItems', stimuliItems);
   setEd('totalRounds', params.totalRounds);
   const { pageSettings, ...timeline } = params.timeline;
-  const pageFlow = buildPageFlow(params);
-  setEd('timeline', { ...timeline, concurrentDisplays: transformConcurrentDisplays(timeline.concurrentDisplays), pageFlow });
-  if (pageFlow) { setEd('sptPageDataVersion', '1'); setEd('sptPageResults', null); }
+  const advancedTimeline = buildAdvancedTimeline(params);
+  setEd('timeline', advancedTimeline ?? { ...timeline, concurrentDisplays: transformConcurrentDisplays(timeline.concurrentDisplays) });
+  if (advancedTimeline) {
+    ['sptPoolSelectionArray', 'sptDisplayedPages', 'sptResponsesUnreversed', 'sptResponsesUnreversedArray']
+      .forEach(name => setEd(name, null));
+  }
   setEd('primes', exportPrime(params));
   setEd('acceptedKeys', params.acceptedKeys.join(','));
   setEd('darkMode', params.trialHtml.darkMode);
@@ -71,6 +88,15 @@ export function hydrateQsf(params: AmpParams) {
 
 export function generateQsfString(params: AmpParams) {
   const hydrated = hydrateQsf(params);
+  // Runtime changes are installed through the manual Qualtrics export workflow.
+  // Do not download a new-schema survey paired with the old pageFlow runtime.
+  if (buildAdvancedTimeline(params)) {
+    const load = hydrated.SurveyElements.find(e => e.PrimaryAttribute === 'QID1')?.Payload as any;
+    const trial = hydrated.SurveyElements.find(e => e.PrimaryAttribute === 'QID2')?.Payload as any;
+    if (!load?.QuestionJS?.includes('transformAdvancedTimeline') || !trial?.QuestionJS?.includes('sptPoolSelectionArray')) {
+      throw new Error('The Qualtrics template needs the updated advanced timeline runtime. Paste amp-qualtrics/src/load.js and src/trial.js into the template experiment, test it, then export QSF and replace src/assets/qsfTemplate.json. Editor settings can still be saved.');
+    }
+  }
   return JSON.stringify(hydrated);
 }
 

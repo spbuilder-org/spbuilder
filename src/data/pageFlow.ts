@@ -17,14 +17,37 @@ export function defaultPage(timeline: AmpTimeline, index: number, keys: string[]
   };
 }
 
-export function buildPageFlow(params: AmpParams) {
+// Stimulize's wire format. Editor IDs stay local; ED page/pool references are one-based.
+export type ExportCondition =
+  | ['and' | 'or', ...ExportCondition[]]
+  | ['response', number, '==' | '!=', string[]]
+  | ['poolSelection', number, string, '==' | '!=', number[]];
+
+export function buildAdvancedTimeline(params: AmpParams) {
   const { timeline } = params;
   if (!timeline.concurrentDisplays || !timeline.pageSettings) return undefined;
-  return { version: 1, sampling: 'uniform-pool', pages: timeline.pageSettings.map((page, i) => ({
-    ...page,
-    displays: timeline.concurrentDisplays![i].flatMap((row, r) => row.map((cell, c) => ({
-      key: getDisplayKey(r, c), pools: [...new Set(choicePools(cell))],
-    }))),
+  function condition(node: PageCondition): ExportCondition {
+    if (node.type === 'group') return [node.operator, ...node.children.map(condition)];
+    const page = timeline.pageSettings!.findIndex(p => p.id === node.pageId) + 1;
+    const op = node.operator === 'eq' ? '==' : '!=';
+    return node.type === 'pool'
+      ? ['poolSelection', page, node.position, op, node.values.map(p => p + 1)]
+      : ['response', page, op, node.values];
+  }
+  return { advanced: true, pages: timeline.pageSettings.map((page, i) => ({
+    layoutType: 'grid',
+    condition: page.condition ? condition(page.condition) : undefined,
+    displays: Object.fromEntries(timeline.concurrentDisplays![i].flatMap((row, r) => row.map((cell, c) => [
+      getDisplayKey(r, c), choicePools(cell).length === 0 ? ['blank'] : ['pool', [...new Set(choicePools(cell))].map(p => p + 1)],
+    ]))),
+    response: {
+      keyboard: page.response.mode === 'keyboard' ? {
+        keys: page.response.keys, delayBefore: page.response.delayBefore, delayAfter: page.response.delayAfter,
+      } : undefined,
+      timeout: page.response.mode === 'timeout' ? { duration: page.response.duration }
+        : page.response.timeout !== null ? { duration: page.response.timeout } : undefined,
+    },
+    interval: page.interval,
   })) };
 }
 
@@ -48,11 +71,10 @@ export function pageFlowErrors(params: AmpParams): string[] {
   const pages = timeline.pageSettings;
   const validPool = (p: number) => Number.isInteger(p) && p >= 0 && p < stimuli.length;
   timeline.concurrentDisplays.forEach((frame, i) => frame.forEach((row, r) => row.forEach((cell, c) => {
-    if (Array.isArray(cell) && !cell.length) errors.push(`Page ${i + 1}, ${getDisplayKey(r, c)}: select a pool or choose Blank.`);
     if (!choicePools(cell).every(validPool)) errors.push(`Page ${i + 1}, ${getDisplayKey(r, c)}: a source pool was removed.`);
   })));
   if (!pages) return errors;
-  if (!pages.length || pages.length !== timeline.concurrentDisplays.length) errors.push('Page settings and displays must match.');
+  if (!pages.length || pages.length !== timeline.concurrentDisplays.length) errors.push('Page settings and layouts must match.');
   if (new Set(pages.map(p => p.id)).size !== pages.length || pages.some(p => !p.id)) errors.push('Page IDs must be unique.');
   stimuli.forEach((pool, i) => {
     if (pool.items.some(item => !Number.isInteger(item.count) || item.count < 0)) errors.push(`Pool ${i + 1}: counts must be nonnegative integers.`);

@@ -1,0 +1,8 @@
+{
+  "stimuliItems": "[{\"pools\":[{\"items\":[{\"type\":\"text\",\"content\":\"insect\",\"count\":1}],\"shuffle\":false},{\"items\":[{\"type\":\"text\",\"content\":\"flower\",\"count\":1}],\"shuffle\":false},{\"items\":[{\"type\":\"text\",\"content\":\"error\",\"count\":2}],\"shuffle\":false}],\"totalTrials\":2}]",
+  "totalRounds": "2",
+  "timeline": "{\"advanced\":true,\"pages\":[{\"layoutType\":\"grid\",\"displays\":{\"A1\":[\"pool\",[1,2]]},\"response\":{\"keyboard\":{\"keys\":[\"d\",\"k\"],\"delayBefore\":0,\"delayAfter\":0}},\"interval\":0},{\"layoutType\":\"grid\",\"condition\":[\"or\",[\"and\",[\"poolSelection\",1,\"A1\",\"==\",[1]],[\"response\",1,\"!=\",[\"d\"]]],[\"and\",[\"poolSelection\",1,\"A1\",\"==\",[2]],[\"response\",1,\"!=\",[\"k\"]]]],\"displays\":{\"A1\":[\"pool\",[3]]},\"response\":{\"timeout\":{\"duration\":500}},\"interval\":0}]}",
+  "primes": "[]",
+  "acceptedKeys": "d,k",
+  "darkMode": "false"
+}

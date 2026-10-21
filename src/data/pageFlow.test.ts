@@ -1,6 +1,6 @@
 import { emptyAmpParams } from './emptyAmpParams';
-import { buildPageFlow, defaultPage, pageFlowErrors, remapTimelinePools } from './pageFlow';
-import { hydrateQsf } from './generate';
+import { buildAdvancedTimeline, defaultPage, pageFlowErrors, remapTimelinePools } from './pageFlow';
+import { hydrateQsf, generateQsfString } from './generate';
 import type { AmpParams, PageCondition } from './ampTypes';
 
 function params(): AmpParams {
@@ -17,8 +17,11 @@ test('legacy export stays legacy and templates do not retain prior page-flow dat
   const legacy = JSON.parse(JSON.stringify(emptyAmpParams));
   const before = JSON.stringify(hydrateQsf(legacy));
   const concurrent = hydrateQsf(params());
-  expect(JSON.parse(ed(concurrent, 'timeline').Value).pageFlow.sampling).toBe('uniform-pool');
-  expect(ed(concurrent, 'sptPageDataVersion').Value).toBe('1');
+  expect(JSON.parse(ed(concurrent, 'timeline').Value).advanced).toBe(true);
+  expect(ed(concurrent, 'sptPageDataVersion')).toBeUndefined();
+  expect(ed(concurrent, 'sptPageResults')).toBeUndefined();
+  expect(ed(concurrent, 'sptPoolSelectionArray').Type).toBe('Recipient');
+  expect(ed(concurrent, 'sptDisplayedPages').Type).toBe('Recipient');
   expect(JSON.stringify(hydrateQsf(legacy))).toBe(before);
 });
 test('export preserves recursive condition and selected sources through settings JSON', () => {
@@ -31,8 +34,11 @@ test('export preserves recursive condition and selected sources through settings
   p.timeline.pageSettings![1].condition = tree;
   const restored = JSON.parse(JSON.stringify(p));
   expect(pageFlowErrors(restored)).toEqual([]);
-  expect(buildPageFlow(restored)?.pages[0].displays[0].pools).toEqual([0, 1]);
-  expect(buildPageFlow(restored)?.pages[1].condition).toEqual(tree);
+  expect(buildAdvancedTimeline(restored)?.pages[0].displays.A1).toEqual(['pool', [1, 2]]);
+  expect(buildAdvancedTimeline(restored)?.pages[1].condition).toEqual(['or',
+    ['and', ['poolSelection', 1, 'A1', '==', [1]]],
+    ['poolSelection', 1, 'A1', '==', [2]],
+  ]);
 });
 test('invalid or forward references and empty groups cannot be exported', () => {
   const p = params();
@@ -50,4 +56,59 @@ test('pool reorder preserves references and deletion invalidates without retarge
   p.timeline = remapTimelinePools(p.timeline, i => i === 0 ? -1 : i - 1);
   p.stimuli.splice(0,1);
   expect(pageFlowErrors(p).join(' ')).toContain('removed');
+});
+
+test('advanced ED uses Stimulize responses and one-based references without selected outputs', () => {
+  const p = params();
+  const page = p.timeline.pageSettings![0];
+  page.response = {mode:'keyboard', keys:['d','k'], delayBefore:100, delayAfter:50, timeout:3000, duration:0};
+  p.timeline.pageSettings![1].condition = { type:'response', pageId:page.id, operator:'neq', values:['d'] };
+  const qsf=hydrateQsf(p);
+  const timeline=JSON.parse(ed(qsf,'timeline').Value);
+  expect(timeline.pageFlow).toBeUndefined();
+  expect(timeline.pages[0].response).toEqual({keyboard:{keys:['d','k'],delayBefore:100,delayAfter:50},timeout:{duration:3000}});
+  expect(timeline.pages[1].condition).toEqual(['response',1,'!=',['d']]);
+  expect(ed(qsf,'selectedOutputs')).toBeUndefined();
+  expect(ed(qsf,'stimuliItem_1_A1')).toBeUndefined();
+  expect(ed(qsf,'stimuliItem_2_A1')).toBeUndefined();
+  expect(ed(qsf,'sptResponsesUnreversedArray').Type).toBe('Recipient');
+  p.timeline.concurrentDisplays![1][0][0]='empty';
+  expect(ed(hydrateQsf(p),'stimuliItem_2_A1')).toBeUndefined();
+});
+test('new-schema download requires a compatible manually exported runtime template', () => {
+  // This expectation follows the actual installed template, including after manual refresh.
+  const qsf=hydrateQsf(params());
+  const load=(qsf.SurveyElements.find(e => e.PrimaryAttribute==='QID1')!.Payload as any).QuestionJS;
+  const trial=(qsf.SurveyElements.find(e => e.PrimaryAttribute==='QID2')!.Payload as any).QuestionJS;
+  if (load.includes('transformAdvancedTimeline') && trial.includes('sptPoolSelectionArray')) {
+    expect(() => generateQsfString(params())).not.toThrow();
+  } else {
+    expect(() => generateQsfString(params())).toThrow('template needs the updated');
+  }
+  expect(() => generateQsfString(JSON.parse(JSON.stringify(emptyAmpParams)))).not.toThrow();
+});
+
+test('manual template refresh cannot reintroduce obsolete or deferred ED in either mode', () => {
+  const template = require('../assets/qsfTemplate.json');
+  const flow = template.SurveyElements.find((e: any) => e.Element === 'FL').Payload.Flow;
+  const saved = JSON.stringify(flow);
+  try {
+    flow[0].EmbeddedData.push(
+      {Field:'selectedOutputs', Type:'Custom', Value:'[{"type":"stimuliItem","page":9}]'},
+      {Field:'stimuliItem_9_A1', Type:'Recipient'},
+      {Field:'sptPageDataVersion', Type:'Custom', Value:'1'},
+    );
+    flow.push({Type:'Branch', Flow:[{Type:'EmbeddedData', EmbeddedData:[
+      {Field:'sptPageResults', Type:'Recipient'},
+      {Field:'stimuliItem_2_B3', Type:'Recipient'},
+      {Field:'researcherNote', Type:'Custom', Value:'keep'},
+    ]}]});
+    const fields = (nodes: any[]): any[] => nodes.flatMap(n => [...(n.EmbeddedData ?? []), ...fields(n.Flow ?? [])]);
+    for (const input of [JSON.parse(JSON.stringify(emptyAmpParams)), params()]) {
+      const qsf=hydrateQsf(input);
+      const nodes=(qsf.SurveyElements.find((e:any)=>e.Element==='FL')!.Payload as any).Flow;
+      expect(fields(nodes).some((e:any)=>['sptPageDataVersion','sptPageResults','selectedOutputs'].includes(e.Field) || e.Field.startsWith('stimuliItem_'))).toBe(false);
+      expect(fields(nodes).find((e:any)=>e.Field==='researcherNote').Value).toBe('keep');
+    }
+  } finally { flow.splice(0,flow.length,...JSON.parse(saved)); }
 });
