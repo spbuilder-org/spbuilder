@@ -37,7 +37,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "test:runtime": "node --test scripts/*.test.cjs"
+    "test:runtime": "node --test scripts/*.test.cjs",
+    "check:template": "node scripts/check-template.cjs"
   },
   "eslintConfig": {
     "extends": [

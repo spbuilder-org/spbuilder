@@ -128,7 +128,16 @@ npm run test:runtime
 AMP_QUALTRICS_SOURCE=../amp-qualtrics npm run test:runtime
 # Optional: verify the same input and normal outputs against Stimulize's actual QSF.
 AMP_QUALTRICS_SOURCE=../amp-qualtrics STIMULIZE_QSF_PATH=../amp-webapp/src/assets/qsfTemplate.json npm run test:runtime
+# Read-only source/template equality check after manual Qualtrics export.
+AMP_QUALTRICS_SOURCE=../amp-qualtrics npm run check:template
 ```
+
+Before publishing, `check:template` must pass against the runtime commit being released.
+After any source cleanup or bug fix, repeat the manual paste, hosted test, and QSF
+export steps even if the previously imported template still runs successfully.
+The advanced-download compatibility guard only recognizes the supported ED schema;
+it does not certify that the template includes the latest fixes. Tests never rewrite
+the template.
 
 Use Node 20+. Run `npm test -- --watchAll=false --runInBand`, `npx tsc --noEmit`, and
 `npm run build` for editor/export checks. The runtime harness covers two rounds,
