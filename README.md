@@ -47,7 +47,16 @@ To learn React, check out the [React documentation](https://reactjs.org/).
 
 ## Concurrent and conditional pages
 
-Enable **Enable concurrent/conditional stimuli display** to edit pages. A position can
+Choose **Mode**: **simple** keeps sequential pool display; **concurrent** keeps the
+original concurrent layout and final keyboard response; **concurrent+conditional**
+enables per-page responses, nested conditions and multiple source pools.
+Click a Page box or its preview to open **Page Condition and Layout**, including
+the page's allowed keyboard keys. The timeline expands a single condition leaf;
+compound conditions show "Composite condition enabled". Switching back to a legacy
+mode asks for confirmation before removing conditions and per-page response settings
+and reducing each position to its first pool.
+
+In concurrent+conditional mode, a position can
 select several source pools. Each draw chooses uniformly among its nonempty pools,
 then consumes one remaining item count from that pool. Selecting the same pool twice
 does not increase its weight. Positions and pages share counts within a round; the

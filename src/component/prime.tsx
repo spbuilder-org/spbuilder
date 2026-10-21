@@ -55,7 +55,7 @@ const PrimeOverride: React.FC<{ field: string }> = ({ field }) => {
           <Space align='start'>
             <Item label='Override stimuli count: ' layout='inline' style={{ margin: 10 }}>
               <Select
-                style={{ width: 300 }}
+                style={{ width: 300, minWidth: 300, maxWidth: 300, flexShrink: 0 }}
                 options={[
                   { label: 'No override', value: 'no' },
                   { label: 'Same count for all rounds', value: 'const' },
@@ -240,7 +240,7 @@ const PrimeItem: React.FC<PrimeItemProps> = ({ field, index, remove, stimuliFiel
             style={{ margin: 5 }}
           >
             <Select
-              mode='multiple' style={{ width: 320 }} renderFormat={renderFormat}
+              mode='multiple' style={{ width: 320, minWidth: 320, maxWidth: 320, flexShrink: 0 }} renderFormat={renderFormat}
               placeholder='All stimuli items are included'
             >
               {PrimeItemOptions(itemsWatch, primeWatch.slice(0, index), excludeUidsWatch)}
@@ -257,7 +257,7 @@ const PrimeItem: React.FC<PrimeItemProps> = ({ field, index, remove, stimuliFiel
             style={{ margin: 5 }}
           >
             <Select
-              mode='multiple' style={{ width: 320 }} renderFormat={renderFormat}
+              mode='multiple' style={{ width: 320, minWidth: 320, maxWidth: 320, flexShrink: 0 }} renderFormat={renderFormat}
             >
               {PrimeItemOptions(itemsWatch, primeWatch.slice(0, index), includeUidsWatch)}
             </Select>

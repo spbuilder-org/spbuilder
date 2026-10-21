@@ -92,7 +92,7 @@ const ConfigModeForm: React.FC = () => {
       {
         isConcurrentDisplaysEnabled && (
           <div>
-            <Item label={<b>Gap between contents (for Concurrent Display only)</b>}>
+            <Item label={<b>Gap between contents (for concurrent pages only)</b>}>
               <Space size='large'>
                 <Item field='trialHtml.concurrentVerticalGap' label={<b>Vertical gap</b>}>
                   <InputNumber suffix='px' style={{ width: 200 }} />

@@ -7,7 +7,7 @@ import { sumBy } from 'lodash';
 export const WarnTotalTrials: React.FC<{ values: AmpParams }> = ({ values }) => {
 
   if (values.timeline.concurrentDisplays && (values.timeline.pageSettings?.some(p => p.condition) || values.timeline.concurrentDisplays.some(frame => frame.some(row => row.some(cell => choicePools(cell).length > 1))))) {
-    return <Alert type='info' content='Pool usage depends on page conditions and random draws, so the trial count cannot be guaranteed from pool sizes. Empty pools are skipped during selection; a position is blank if all its pools are exhausted. Actual draws and page responses are saved in sptPageResults. The built-in legacy data analysis does not support this format.' />;
+    return null;
   }
   let usageOfEachPool: number[];
   if (values.timeline.concurrentDisplays) {

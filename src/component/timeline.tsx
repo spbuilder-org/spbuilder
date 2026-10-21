@@ -1,11 +1,12 @@
-import { Card, Divider, Form, FormInstance, InputNumber, Select, Space, Switch, Tag, Tooltip, Typography } from '@arco-design/web-react';
+import { Card, Divider, Form, FormInstance, InputNumber, Select, Space, Tag, Tooltip, Typography } from '@arco-design/web-react';
 import { IconArrowFall, IconQuestionCircle } from '@arco-design/web-react/icon';
 import React, { Fragment, useEffect } from 'react';
-import type { AmpStimuli, AmpTimeline, ConcurrentDisplayFrame } from '../data/ampTypes';
+import type { AmpParams, AmpStimuli, AmpTimeline } from '../data/ampTypes';
 import { AddRemoveButtons } from './addRemoveButtons';
 import { ConcurrentDisplayFrameEditor } from './concurrentDisplayFrameEditor';
 import { addToList, removeFromList } from '../util/formUtil';
 import { PageTimeline } from './pageTimeline';
+import { changeTimelineMode, timelineMode, type TimelineMode } from '../data/timelineMode';
 import { forEach2d } from '../util/util';
 
 const { Item } = Form;
@@ -27,10 +28,10 @@ export const ConcurrentDisplaysSelector: React.FC<{ form: FormInstance, field: s
           <>
             {
               fields.map(({ key, field }) => (
-                <div style={{ width: 140 }}>
+                <div style={{ width: 140, minWidth: 140, maxWidth: 140, flexShrink: 0 }}>
                   {/* Hard container to prevent arco resizeObserver issue */}
                   <Item field={field} noStyle key={key}>
-                    <Select options={options} style={{ width: 140 }} />
+                    <Select options={options} style={{ width: 140, minWidth: 140, maxWidth: 140, flexShrink: 0 }} />
                   </Item>
                 </div>
               ))
@@ -54,7 +55,8 @@ export const Timeline: React.FC = () => {
   const stimuliWatch = Form.useWatch('stimuli', form) as AmpStimuli[];
   const timelineWatch = Form.useWatch('timeline', form) as AmpTimeline;
   const concurrentDisplaysWatch = Form.useWatch('timeline.concurrentDisplays', form) as AmpTimeline['concurrentDisplays'];
-  const isConcurrentDisplaysEnabled = Boolean(concurrentDisplaysWatch);
+  const mode = timelineMode(timelineWatch);
+  const isConcurrentDisplaysEnabled = mode !== 'simple';
   const timelineStimuliCount = timelineWatch.durationsAndIntervals.length + 1;
   const tagColor = isConcurrentDisplaysEnabled ? 'orange' : 'blue';
 
@@ -75,19 +77,23 @@ export const Timeline: React.FC = () => {
     }
   }, [concurrentDisplaysWatch, isConcurrentDisplaysEnabled, form, stimuliWatch.length, timelineWatch.pageSettings]);
 
-  const onConcurrentDisplaysSwitchChange = (isConcurent: boolean) => {
-    if (isConcurent) {
-      const compatibleElementPoolMapping: ConcurrentDisplayFrame[] = stimuliWatch.map((v, index) => [[index]]);
-      form.setFieldValue('timeline.concurrentDisplays', compatibleElementPoolMapping);
-    } else {
-      if (timelineWatch.pageSettings && !window.confirm('Turning this off clears the custom pages and conditions. Continue?')) return;
-      form.setFieldValue('timeline.pageSettings', undefined);
-      resizeDurationsAndIntervalsArray(form, stimuliWatch.length);
-      form.setFieldValue('timeline.concurrentDisplays', undefined);
-      form.setFieldValue('trialHtml.concurrentLayout', 'row');
-      form.setFieldValue('trialHtml.concurrentGap', 100);
-    }
+  const onModeChange = (next: TimelineMode) => {
+    if (next === mode) return;
+    const downgradeDetails = next === 'simple'
+      ? 'Simple mode displays one item from each pool in sequence and uses global keyboard settings.'
+      : 'Each position keeps only its first pool; only the last page accepts keyboard input.';
+    if (mode === 'concurrent+conditional' && !window.confirm(
+      `Switching mode removes page conditions and per-page response settings. ${downgradeDetails} Continue?`
+    )) return;
+    const updated = changeTimelineMode(form.getFields() as AmpParams, next);
+    form.setFieldValue('timeline', updated.timeline);
+    form.setFieldValue('acceptedKeys', updated.acceptedKeys);
   };
+  const modeSelector = <Space>
+    <label htmlFor='timeline-mode'>Mode</label>
+    <Select id='timeline-mode' aria-label='Mode' value={mode} onChange={onModeChange} style={{ width: 230, minWidth: 230, maxWidth: 230, flexShrink: 0 }}
+      options={[{ label: 'Simple', value: 'simple' }, { label: 'Concurrent', value: 'concurrent' }, { label: 'Concurrent+conditional', value: 'concurrent+conditional' }]} />
+  </Space>;
 
   // Add/Remove durationsAndIntervals item as well as concurrentDisplays item
   const addConcurrentDisplaysFrame = () => {
@@ -99,25 +105,16 @@ export const Timeline: React.FC = () => {
     removeFromList(form, 'timeline.concurrentDisplays');
   }
 
-  if (isConcurrentDisplaysEnabled) return (
+  if (mode === 'concurrent+conditional') return (
     <Card style={{ textAlign: 'start' }}>
-      <Space><Switch checked onChange={onConcurrentDisplaysSwitchChange} />Enable concurrent/conditional stimuli display</Space>
+      {modeSelector}
       <PageTimeline />
     </Card>
   );
 
   return (
     <Card style={{ textAlign: 'start' }}>
-      <Space>
-        <Switch checked={isConcurrentDisplaysEnabled} onChange={onConcurrentDisplaysSwitchChange} />
-        Enable concurrent/conditional stimuli display
-        <Tooltip content={<>
-          Normally, in one trial, stimuli items are displayed sequentially, one item from each stimuli pool.
-          But after enabling concurrent stimuli display, you can display more than one item simultaneously from multiple stimuli pools.
-        </>}>
-          <IconQuestionCircle />
-        </Tooltip>
-      </Space>
+      {modeSelector}
       {
         timelineWatch.durationsAndIntervals.map((_: any, index: number) => (
           <Fragment key={index}>
@@ -125,7 +122,7 @@ export const Timeline: React.FC = () => {
               {/* <div style={{ width: 20, display: 'flex', alignItems: 'center'}}><IconArrowFall/></div> */}
               <IconArrowFall style={{ margin: 'auto 0', width: 16, flexShrink: 0 }} />
               <Tag bordered color={tagColor} size='medium' style={{ width: 100, height: '100%', textAlign: 'center', flexShrink: 0 }}>
-                {isConcurrentDisplaysEnabled ? 'Display' : 'Stimuli'} {index + 1}
+                {isConcurrentDisplaysEnabled ? 'Page' : 'Stimuli'} {index + 1}
               </Tag>
               <Item field={`timeline.durationsAndIntervals[${index}][0]`} noStyle rules={[{ required: true }]}>
                 <InputNumber suffix='ms' min={0} style={{ width: 160, minWidth: 80, flexShrink: 0 }} />
@@ -154,7 +151,7 @@ export const Timeline: React.FC = () => {
       <div style={{ margin: 10, display: 'flex', height: 30 * 3 + 10 * 2, justifyContent: 'flex-start', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 30, alignSelf: 'start' }}><IconArrowFall /></div>
         <Tag bordered color={tagColor} size='medium' style={{ width: 100, height: '100%', textAlign: 'center', flexShrink: 0 }}>
-          {isConcurrentDisplaysEnabled ? 'Display' : 'Stimuli'} {timelineStimuliCount}
+          {isConcurrentDisplaysEnabled ? 'Page' : 'Stimuli'} {timelineStimuliCount}
         </Tag>
         <div style={{ display: 'flex', height: '100%', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'stretch', flexShrink: 0 }}>
           <Space style={{ height: 30 }}>
