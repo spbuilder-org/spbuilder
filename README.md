@@ -119,14 +119,19 @@ Keep the manual release workflow:
 3. Paste the complete scripts into the template questions and test the experiment.
 4. Export the experiment as QSF and replace `src/assets/qsfTemplate.json` here.
 
-Run `npm run test:runtime` in `amp-qualtrics` to test the source and in SP-Builder
-to test the imported QSF scripts. Tests do not write back to the template. The
-current STML-29 candidate template was assembled locally during development; it
-still needs testing and a fresh export from the Qualtrics template experiment.
+Run `npm run test:runtime` in `amp-qualtrics` for source tests. In SP-Builder:
 
-Use Node 20+ for `npm run test:runtime`. These tests include the actual generated QSF
-load/trial scripts in a Qualtrics API test harness, legacy behavior, two rounds,
-feedback branches, depletion, caching, timeouts, and cleanup. Run
-`npm test -- --watchAll=false --runInBand`, `npx tsc --noEmit`, and `npm run build`
-for editor/export checks. A test harness does not replace verification in a hosted
-Qualtrics survey.
+```sh
+# Tests the installed template; advanced integration tests explicitly skip if it is stale.
+npm run test:runtime
+# Tests newly generated ED with source scripts substituted IN MEMORY only.
+AMP_QUALTRICS_SOURCE=../amp-qualtrics npm run test:runtime
+# Optional: verify the same input and normal outputs against Stimulize's actual QSF.
+AMP_QUALTRICS_SOURCE=../amp-qualtrics STIMULIZE_QSF_PATH=../amp-webapp/src/assets/qsfTemplate.json npm run test:runtime
+```
+
+Use Node 20+. Run `npm test -- --watchAll=false --runInBand`, `npx tsc --noEmit`, and
+`npm run build` for editor/export checks. The runtime harness covers two rounds,
+correct/incorrect feedback, later-trial nested conditions, exhaustion, timeouts,
+RT origin, caching, blank/skipped states, and legacy behavior. It does not replace
+verification in a hosted Qualtrics survey.
