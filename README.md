@@ -144,3 +144,22 @@ Use Node 20+. Run `npm test -- --watchAll=false --runInBand`, `npx tsc --noEmit`
 correct/incorrect feedback, later-trial nested conditions, exhaustion, timeouts,
 RT origin, caching, blank/skipped states, and legacy behavior. It does not replace
 verification in a hosted Qualtrics survey.
+
+## Deploying the existing SP-Builder site
+
+Source is maintained in `spbuilder-org/spbuilder`. The live site at
+https://spbuilder.org/ is hosted by the `gh-pages` branch of
+`spbuilder-team/spbuilder-team.github.io`; pushing source does not deploy it.
+
+From a clean, reviewed source commit, run `npm run deploy`. The script checks
+that tracked files are committed and that the imported template matches
+`../amp-qualtrics/src` (or `AMP_QUALTRICS_SOURCE`), builds the editor, preserves
+`spbuilder.org` in CNAME, and publishes to the explicit hosting repository.
+It uses the existing SSH key at `~/.ssh/spbuilder-team` with `IdentitiesOnly=yes`
+and records the full editor source SHA in the artifact commit message.
+The runtime checkout must be at the commit referenced by the template commit.
+
+Before deployment, save the current hosting commit and its files. Verify the
+live editor and its downloaded QSF afterward. To roll back, publish the saved
+artifact files as a new commit to the same hosting branch; do not force-push
+or move the domain.
