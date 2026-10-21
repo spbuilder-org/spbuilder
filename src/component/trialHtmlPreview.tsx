@@ -4,6 +4,7 @@ import useWatch from '@arco-design/web-react/es/Form/hooks/useWatch';
 import { cloneDeep, isEqual } from 'lodash';
 import React, { useEffect, useRef, useState } from 'react';
 import type { AmpParams, AmpTimeline, ConcurrentDisplayFrame } from '../data/ampTypes';
+import { choicePools } from '../data/pageFlow';
 import { renderTrialHtml } from '../data/renderTrialHtml';
 import { forEach2d, getDisplayKey, map2d } from '../util/util';
 import { StimuliThumbnail } from './stimuliThumbnail';
@@ -49,7 +50,7 @@ const SinglePreviewSelector: React.FC<PreviewUidsSelector> = ({ previewUids, upd
       <h3>Preview</h3>
       <Select
         placeholder='Select a stimuli item to preview'
-        style={{ width: 300, height: 32 }}
+        style={{ width: 300, minWidth: 300, maxWidth: 300, flexShrink: 0, height: 32 }}
         value={uid}
         onChange={updateUid}
         allowClear
@@ -104,11 +105,11 @@ const ConcurrentPreviewSelector: React.FC<PreviewUidsSelector> = ({ previewUids,
       <h3>Preview</h3>
 
       <Select
-        placeholder='Select a Display in the trial timeline'
-        style={{ width: 200, height: 32, marginBottom: 10 }}
+        placeholder='Select a Page in the trial timeline'
+        style={{ width: 200, minWidth: 200, maxWidth: 200, flexShrink: 0, height: 32, marginBottom: 10 }}
         value={previewFrameIndex}
         onChange={setPreviewFrameIndex}
-        options={concurrentDisplaysWatch.map((layout, index) => ({ label: `Display ${index + 1}`, value: index }))}
+        options={concurrentDisplaysWatch.map((layout, index) => ({ label: `Page ${index + 1}`, value: index }))}
       />
       <Space size='large'>
         {
@@ -118,17 +119,17 @@ const ConcurrentPreviewSelector: React.FC<PreviewUidsSelector> = ({ previewUids,
               <Form.Item layout='inline' label={getDisplayKey(rowIndex, colIndex)}>
                 <Select
                   placeholder={col === 'empty' ? '(empty)' : undefined}
-                  style={{ width: 160, height: 32 }}
+                  style={{ width: 160, minWidth: 160, maxWidth: 160, flexShrink: 0, height: 32 }}
                   disabled={col === 'empty'}
                   value={resizedUids[rowIndex][colIndex]}
                   onChange={uid => updateOneUid(rowIndex, colIndex, uid ?? 'empty')}
                 >
                   {
-                    col === 'empty' ? [] : stimuliWatch[col].items.map((item, itemIndex) => (
+                    choicePools(col).flatMap(poolIndex => (stimuliWatch[poolIndex]?.items ?? []).map((item, itemIndex) => (
                       <Option key={item.uid} value={item.uid}>
-                        <StimuliThumbnail {...item} indexDisplay={`${col + 1}-${itemIndex + 1}`} />
+                        <StimuliThumbnail {...item} indexDisplay={`${poolIndex + 1}-${itemIndex + 1}`} />
                       </Option>
-                    ))
+                    )))
                   }
                 </Select>
               </Form.Item>

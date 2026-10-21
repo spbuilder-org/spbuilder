@@ -10,6 +10,22 @@ export const processData = async (
     throw new Error('No data provided');
   }
 
+  function parseJson(value: unknown) {
+    if (typeof value !== 'string') return value;
+    try { return JSON.parse(value); } catch { return undefined; }
+  }
+  const isAdvanced = (row: CsvRow) => {
+    if (parseJson(row.timeline)?.advanced === true) return true;
+    const responses = parseJson(row.sptResponsesArray);
+    if (Array.isArray(responses) && responses.some(round => Array.isArray(round) && round.some(Array.isArray))) return true;
+    // Some CSV exports omit the configuration and JSON columns.
+    return (typeof row.sptPoolSelectionArray === 'string' && row.sptPoolSelectionArray.trim().startsWith('['))
+      || (typeof row.sptDisplayedPages === 'string' && row.sptDisplayedPages.length > 0)
+      || (typeof row.sptResponses === 'string' && row.sptResponses.includes('/'));
+  };
+  if (data.some(isAdvanced)) {
+    throw new Error('Advanced page results are not supported by this legacy analysis. Use sptResponsesArray, sptPoolSelectionArray and sptDisplayedPages; shuffleResult is not a trial-to-stimulus mapping for these experiments.');
+  }
   let processedData = [...data];
 
   // Ensure ID exists

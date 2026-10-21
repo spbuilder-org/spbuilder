@@ -1,0 +1,173 @@
+{
+  "values": {
+    "stimuli": [
+      {
+        "items": [
+          {
+            "uid": 100,
+            "type": "text",
+            "content": "insect",
+            "count": 1
+          }
+        ],
+        "shuffle": false,
+        "isEnablePriming": false,
+        "prime": []
+      },
+      {
+        "items": [
+          {
+            "uid": 101,
+            "type": "text",
+            "content": "flower",
+            "count": 1
+          }
+        ],
+        "shuffle": false,
+        "isEnablePriming": false,
+        "prime": []
+      },
+      {
+        "items": [
+          {
+            "uid": 102,
+            "type": "text",
+            "content": "error",
+            "count": 2
+          }
+        ],
+        "shuffle": false,
+        "isEnablePriming": false,
+        "prime": []
+      }
+    ],
+    "timeline": {
+      "durationsAndIntervals": [
+        [
+          100,
+          125
+        ]
+      ],
+      "delayAfterKeyboard": 0,
+      "delayBeforeKeyboard": 0,
+      "autoProceedTimeout": null,
+      "concurrentDisplays": [
+        [
+          [
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        [
+          [
+            2
+          ]
+        ]
+      ],
+      "pageSettings": [
+        {
+          "id": "stimulus",
+          "name": "Categorize",
+          "response": {
+            "mode": "keyboard",
+            "keys": [
+              "d",
+              "k"
+            ],
+            "duration": 500,
+            "timeout": null,
+            "delayBefore": 0,
+            "delayAfter": 0
+          },
+          "interval": 0
+        },
+        {
+          "id": "feedback",
+          "name": "Error",
+          "response": {
+            "mode": "timeout",
+            "keys": [
+              "d",
+              "k"
+            ],
+            "duration": 500,
+            "timeout": null,
+            "delayBefore": 0,
+            "delayAfter": 0
+          },
+          "interval": 0,
+          "condition": {
+            "type": "group",
+            "operator": "or",
+            "children": [
+              {
+                "type": "group",
+                "operator": "and",
+                "children": [
+                  {
+                    "type": "pool",
+                    "pageId": "stimulus",
+                    "position": "A1",
+                    "operator": "eq",
+                    "values": [
+                      0
+                    ]
+                  },
+                  {
+                    "type": "response",
+                    "pageId": "stimulus",
+                    "operator": "neq",
+                    "values": [
+                      "d"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "group",
+                "operator": "and",
+                "children": [
+                  {
+                    "type": "pool",
+                    "pageId": "stimulus",
+                    "position": "A1",
+                    "operator": "eq",
+                    "values": [
+                      1
+                    ]
+                  },
+                  {
+                    "type": "response",
+                    "pageId": "stimulus",
+                    "operator": "neq",
+                    "values": [
+                      "k"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "acceptedKeys": [
+      "d",
+      "k"
+    ],
+    "totalTrials": 2,
+    "totalRounds": 2,
+    "trialHtml": {
+      "width": 300,
+      "height": 300,
+      "marginTop": 50,
+      "instruction": "You can add trial instructions here, \nbut a more flexible way is to add a Text/Graphic question manually in Qualtrics.",
+      "textFontSize": 28,
+      "textIsBold": true,
+      "textWrap": true,
+      "darkMode": false
+    }
+  }
+}
