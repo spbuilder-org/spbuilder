@@ -1,7 +1,7 @@
 import React, { type PropsWithChildren, useCallback, useRef, useState } from 'react';
 import './bubblyButton.css';
 
-export const BubblyButton: React.FC<PropsWithChildren<{ href?: string, download?: string }>> = ({ href, download, children }) => {
+export const BubblyButton: React.FC<PropsWithChildren<{ href?: string, download?: string, onDownload?: () => void }>> = ({ href, download, onDownload, children }) => {
 
   const ref = useRef<HTMLAnchorElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -17,6 +17,7 @@ export const BubblyButton: React.FC<PropsWithChildren<{ href?: string, download?
       <a
         className={'bubbly-button' + (isAnimating ? ' animate' : '')}
         href={href}
+        onClick={href ? onDownload : undefined}
         download={download}
         ref={ref}
       >

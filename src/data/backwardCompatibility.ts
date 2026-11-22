@@ -3,8 +3,6 @@ import { emptyAmpParams } from './emptyAmpParams';
 import { getUidCounter, setUidCounter } from './uid';
 
 export function transformOldValues(values: AmpParams) {
-  console.log('transformOldValues');
-  console.log(JSON.stringify(values))
   if (typeof values.trialHtml !== 'string') {
     if (values.trialHtml.text !== undefined) {
       values.trialHtml.instruction = values.trialHtml.text;
@@ -14,13 +12,12 @@ export function transformOldValues(values: AmpParams) {
     values.trialHtml.textIsBold ??= true;
     values.trialHtml.textWrap ??= true;
     values.trialHtml.darkMode ??= false;
-
   } else {
     // Move string-type trialHtml into trialHtml.customHtml, and fill the config with default values
     values.trialHtml = {
       ...emptyAmpParams.trialHtml,
       customHtml: values.trialHtml,
-    }
+    };
   }
 
   // Old values do not have uidCounter. Set to 1000 to avoid collision.
@@ -29,18 +26,13 @@ export function transformOldValues(values: AmpParams) {
   } else {
     setUidCounter(1000);
   }
-
-  console.log('=>');
-  console.log(JSON.stringify(values))
 }
 
-
-export function transformValuesOnSave(values: any) {
+export function transformValuesOnSave({ values }: { values: AmpParams }) {
   return {
     values: {
-      ...values.values,
+      ...values,
       uidCounter: getUidCounter(),
-    }
-  }
-  // Cannot use values.uidCounter = getUid() otherwise error "object is not extensible" for arco form value
+    },
+  };
 }

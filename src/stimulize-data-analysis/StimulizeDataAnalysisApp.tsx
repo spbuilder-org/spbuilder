@@ -1,4 +1,5 @@
 import { Modal } from '@arco-design/web-react';
+import { recordAction } from '../analytics/usage';
 import React, { useState, useRef, ChangeEvent } from 'react';
 import Papa from 'papaparse';
 import { saveAs } from 'file-saver';
@@ -100,6 +101,7 @@ export function StimulizeDataAnalysisApp() {
           });
 
           setRawData(cleanedData);
+          if (cleanedData.length && results.errors.length === 0) recordAction('analysis_data_imported');
           setSelectedData(null);
           setProcessedData(null);
           setConfirmedVars(false);
@@ -191,6 +193,7 @@ export function StimulizeDataAnalysisApp() {
     const csv = Papa.unparse(processedData);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     saveAs(blob, `processed_data_${new Date().toISOString().split('T')[0]}.csv`);
+    recordAction('processed_data_download_requested');
   };
 
   const resetCleaningOptions = () => {
