@@ -1,6 +1,6 @@
 # SP-Builder usage analytics
 
-The editor, data analysis tool and manual share one US PostHog project. The [usage dashboard](https://us.posthog.com/project/755301/dashboard/2395071) separates local verification (`environment=beta`) from the published site (`prod`). Filter on `environment = prod` for production reporting.
+The editor, data analysis tool and manual share one US PostHog project. Use the [production dashboard](https://us.posthog.com/project/755301/dashboard/2395071) for published site usage (`environment = prod`) and the [beta dashboard](https://us.posthog.com/project/755301/dashboard/2395370) for local development and testing (`environment = beta`). Each dashboard and its saved insights filter on their own environment. You can edit a beta insight independently of its production counterpart.
 
 ## Consent and collection
 
@@ -28,7 +28,7 @@ The survey becomes eligible on a returning browser's second distinct session or 
 
 ## Dashboard
 
-The first row shows the current UTC calendar month to date as a number, alongside a six-month trend. Each point represents one calendar month, including the current partial month. **Monthly PV** counts every `$pageview` across the editor, analysis tool and manual. **Monthly UV** counts each anonymous browser identity with a `$pageview` once per month across those routes. Both cards include beta and production by default. Select `environment = prod` on the dashboard for production traffic alone.
+The first row shows the current UTC calendar month to date as a number, alongside a six-month trend. Each point represents one calendar month, including the current partial month. **Monthly Page Visits** (PV) counts every `$pageview` across the editor, analysis tool and manual. **Monthly User Visits** (UV) counts each anonymous browser identity with a `$pageview` once per month across those routes.
 
 **Editor settings actions** counts each confirmed **Use Example Settings**, successful **Load**, and **Save** download request over the last 30 days. Repeated actions count separately. [View the chart](https://us.posthog.com/project/755301/insights/xs6WrWac)
 
