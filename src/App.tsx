@@ -11,6 +11,7 @@ import { DataAnalysisPage } from './pages/DataAnalysis/DataAnalysisPage';
 import { UserManualPage } from './pages/UserManual/UserManualPage';
 import cite from './data/cite';
 import './App.css';
+import { UsageSettings } from './analytics/UsageSettings';
 
 const { Title, Paragraph } = Typography;
 
@@ -122,6 +123,7 @@ function AppShell() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout.Content>
+        <UsageSettings path={location.pathname} />
       </Layout>
     </div>
   );

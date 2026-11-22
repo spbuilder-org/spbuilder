@@ -1,3 +1,4 @@
+import { recordAction } from '../../analytics/usage';
 import React, { useState } from 'react';
 import { performAnalysis, performTTest } from '../utils/dataProcessing';
 import type { AnalysisParams, AnalysisResult, CsvRow } from '../types';
@@ -44,6 +45,7 @@ const AnalysisTab: React.FC<AnalysisTabProps> = ({
       }
       
       setAnalysisResults(analysisResults);
+      if (analysisResults.summary.length) recordAction('analysis_completed');
       setShowAnalysis(true);
       setError(null);
     } catch (err) {

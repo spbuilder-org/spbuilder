@@ -1,10 +1,12 @@
 import { Alert, Collapse, Form, InputNumber, type FormInstance, Tooltip, Space } from '@arco-design/web-react';
+import isEqual from 'lodash/isEqual';
 import throttle from 'lodash/throttle';
 import React, { useEffect, useRef, useState } from 'react';
+import { recordQsfDownload, editingStarted, needsEditingEvent, type SettingsSource } from '../analytics/usage';
 import type { AmpParams } from '../data/ampTypes';
 import { emptyAmpParams } from '../data/emptyAmpParams';
 import { generateBlob, generateQsfString } from '../data/generate';
-import { PrimeValidation, getPrimeValidation, initialPrimeValidation } from '../data/primeValidation';
+import { type PrimeValidation, getPrimeValidation } from '../data/primeValidation';
 import { useBlobUrl } from '../hooks/useBlobUrl';
 import { PrimeValidationContext } from './PrimeValidationContext';
 import { AcceptedKeys } from './acceptedKeys';
@@ -21,7 +23,7 @@ import { Debugger } from './debugger';
 const { Item } = Form;
 
 
-const DownloadButton: React.FC<{ values?: AmpParams }> = ({ values }) => {
+const DownloadButton: React.FC<{ values?: AmpParams; source: React.MutableRefObject<SettingsSource> }> = ({ values, source }) => {
   const [url, setUrl] = useState<string>();
   const [error, setError] = useState<string>();
   const blobUrl = useBlobUrl();
@@ -42,7 +44,7 @@ const DownloadButton: React.FC<{ values?: AmpParams }> = ({ values }) => {
   useEffect(() => () => (throttledSetBlob.current as any)?.cancel(), []);
   if (error) return <Alert type='error' title='Cannot generate QSF yet' content={error} />;
   return (
-    <BubblyButton href={url} download='spt-generator.qsf'>
+    <BubblyButton href={url} download='spt-generator.qsf' onDownload={() => values && recordQsfDownload(values, source.current)}>
       <Space>
         <IconCloudDownload style={{ fontSize: '1.5em' }} />
         Generate Qualtrics qsf File
@@ -52,15 +54,27 @@ const DownloadButton: React.FC<{ values?: AmpParams }> = ({ values }) => {
 };
 
 
-export const MainForm: React.FC<{}> = ({ }) => {
-
-  console.log('MainForm')
+export const MainForm = () => {
   const formRef = useRef<FormInstance<AmpParams>>(null);
+
+  const source = useRef<SettingsSource>('blank');
+  const checkingEdit = useRef(false);
+  // Arco also calls onValuesChange for initialization and programmatic updates. Compare the
+  // configuration around a user action inside the editing controls (including React portals).
+  const checkEdit = () => {
+    const form = formRef.current;
+    if (!form || checkingEdit.current || !needsEditingEvent()) return;
+    const before = form.getFields();
+    checkingEdit.current = true;
+    queueMicrotask(() => {
+      checkingEdit.current = false;
+      if (formRef.current === form && !isEqual(before, form.getFields())) editingStarted();
+    });
+  };
 
   const [primeValidation, setPrimeValidation] = useState<PrimeValidation | null>(null);
 
-  const onValuesChange = (changeValue: Partial<AmpParams>, values: Partial<AmpParams>) => {
-    console.log('onValuesChange: ', changeValue, values);
+  const onValuesChange = (_: Partial<AmpParams>, values: Partial<AmpParams>) => {
     if (values.stimuli && values.totalRounds) {
       setPrimeValidation(getPrimeValidation(values.stimuli, values.totalRounds));
     }
@@ -75,56 +89,66 @@ export const MainForm: React.FC<{}> = ({ }) => {
         onValuesChange={onValuesChange}
       >
         {window.location.hostname === 'localhost' && <Debugger />}
-        <LoadSave />
-        <h3 style={{ textAlign: 'left' }}>Stimuli Pool</h3>
-        <StimuliPool />
-        <br />
+        <LoadSave onLoad={value => { source.current = value; }} />
+        <div
+          onPointerDownCapture={checkEdit}
+          onMouseDownCapture={checkEdit}
+          onClickCapture={checkEdit}
+          onInputCapture={checkEdit}
+          onChangeCapture={checkEdit}
+          onKeyDownCapture={checkEdit}
+          onBlurCapture={checkEdit}
+          onDropCapture={checkEdit}
+        >
+          <h3 style={{ textAlign: 'left' }}>Stimuli Pool</h3>
+          <StimuliPool />
+          <br />
 
-        <h3 style={{ textAlign: 'left' }}>Trial Timeline</h3>
+          <h3 style={{ textAlign: 'left' }}>Trial Timeline</h3>
 
-        <Item field='timeline'>
-          <Timeline />
-        </Item>
-
-        <span style={{ textAlign: 'left' }}>
-          <Item label='Number of total trials' field='totalTrials' >
-            <InputNumber min={0} style={{ width: 160 }} suffix='trials' />
+          <Item field='timeline'>
+            <Timeline />
           </Item>
-          <Item shouldUpdate noStyle>
-            {values => <WarnTotalTrials values={values} />}
-          </Item>
-          <MultiRounds />
-          <Item shouldUpdate noStyle>{values => !values.timeline?.pageSettings ? <>
-          <Item
-            label={
-              <>
-                Allowed Input Keys &nbsp;
-                <Tooltip content={`The keys that participants are allowed to press.\nParticipants' responses will be recorded in Qualtrics survey result data.`}>
-                  <IconQuestionCircle />
-                </Tooltip>
-              </>
-            }
-            field='acceptedKeys'
-            extra='Letters (a~z, case insensitive), Number digits (0~9), Arrow keys, Space key.'
-          >
-            <AcceptedKeys />
-          </Item>
-          <Item field='timeline.autoProceedTimeout'>
-            <AutoProceedTimeout />
-          </Item>
-          </> : null}</Item>
-        </span>
 
-        <Collapse bordered={false} style={{ marginBottom: 20 }}>
-          <Collapse.Item name='0' header={<h3>Trial Block HTML</h3>}>
-            <TrialHtml />
-          </Collapse.Item>
-        </Collapse>
+          <span style={{ textAlign: 'left' }}>
+            <Item label='Number of total trials' field='totalTrials' >
+              <InputNumber min={0} style={{ width: 160 }} suffix='trials' />
+            </Item>
+            <Item shouldUpdate noStyle>
+              {values => <WarnTotalTrials values={values} />}
+            </Item>
+            <MultiRounds />
+            <Item shouldUpdate noStyle>{values => !values.timeline?.pageSettings ? <>
+              <Item
+                label={
+                  <>
+                    Allowed Input Keys &nbsp;
+                    <Tooltip content={`The keys that participants are allowed to press.\nParticipants' responses will be recorded in Qualtrics survey result data.`}>
+                      <IconQuestionCircle />
+                    </Tooltip>
+                  </>
+                }
+                field='acceptedKeys'
+                extra='Letters (a~z, case insensitive), Number digits (0~9), Arrow keys, Space key.'
+              >
+                <AcceptedKeys />
+              </Item>
+              <Item field='timeline.autoProceedTimeout'>
+                <AutoProceedTimeout />
+              </Item>
+            </> : null}</Item>
+          </span>
 
+          <Collapse bordered={false} style={{ marginBottom: 20 }}>
+            <Collapse.Item name='0' header={<h3>Trial Block HTML</h3>}>
+              <TrialHtml />
+            </Collapse.Item>
+          </Collapse>
+        </div>
         <Item shouldUpdate>
           {
             values => (
-              <DownloadButton values={values} />
+              <DownloadButton values={values} source={source} />
             )
           }
         </Item>
