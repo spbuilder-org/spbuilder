@@ -1,3 +1,9 @@
+/**
+ * Opt-in usage analytics for the editor, analysis tool, and manual.
+ * UsageSettings supplies consent and route changes. Once enabled, this module tracks
+ * one page visit at a time and attaches it to actions reported by the UI. PostHog
+ * owns the session ID. We use it to track the first edit and feedback eligibility.
+ */
 import posthog from 'posthog-js/dist/module.slim.no-external';
 import type { CaptureResult } from 'posthog-js';
 import type { AmpParams } from '../data/ampTypes';
@@ -57,7 +63,8 @@ interface Session {
   campaign: Record<string, string>;
 }
 
-// Keep the entry campaign across refreshes, route changes, and downloads within this SDK session.
+// Reuse entry attribution, first-edit status, and editor time across reloads while the
+// SDK session ID matches. A new ID starts fresh counters and marks a prior visitor as returning.
 function session(): Session {
   let prior: Session | undefined;
   try { prior = JSON.parse(read(sessionKey) || 'null'); } catch { /* Start a fresh session. */ }
@@ -104,7 +111,8 @@ const sdkFields = ['token', 'distinct_id', '$device_id', '$session_id', '$window
 type EventName = keyof typeof eventFields;
 type Meta = Record<string, string | number | boolean>;
 
-// Project the final SDK payload too: URL, initial UTM, person properties and DOM data can be added by the SDK.
+// PostHog calls this after adding its own properties. Recheck consent, copy only the
+// allowed fields, and build the URL from the known route to keep raw query strings private.
 function clean(event: CaptureResult): CaptureResult | null {
   if (!active || !visit || getConsent() !== 'allow' || !Object.prototype.hasOwnProperty.call(eventFields, event.event)) return null;
   const fields = [...sdkFields, ...eventFields[event.event as EventName]];
@@ -128,6 +136,9 @@ function capture(name: EventName, metadata?: Meta) {
 export function recordAction(name: keyof typeof actionFields) {
   capture(name);
 }
+
+// The editor checks this before comparing form values around a user action. It calls
+// editingStarted only after a change, so loading settings does not count as a manual edit.
 export function needsEditingEvent() {
   if (!active || !visit) return false;
   resumeVisit();
@@ -141,6 +152,9 @@ export function editingStarted() {
   write(sessionKey, JSON.stringify(state));
   capture('editing_started');
 }
+
+// The download handler has the full experiment. Reduce it to its starting point,
+// counts, and feature flags before passing anything to PostHog.
 export function recordQsfDownload(values: AmpParams, startedFrom: SettingsSource) {
   if (!active) return;
   const { timeline, stimuli, totalRounds } = values;
@@ -154,12 +168,17 @@ export function recordQsfDownload(values: AmpParams, startedFrom: SettingsSource
 }
 
 function foreground() { return document.visibilityState === 'visible' && document.hasFocus(); }
+
+// Account for the interval since the last tick using the focus state at its start.
 function tick() {
   if (!visit) return;
   const now = performance.now();
   if (visit.focused !== null) visit.delta += Math.max(0, now - visit.focused);
   visit.focused = foreground() ? now : null;
 }
+
+// Send only the new foreground milliseconds. The segment number lets reports
+// deduplicate increments within a visit. Page leave records total elapsed time separately.
 function flush() {
   if (!visit) return;
   tick();
@@ -188,10 +207,10 @@ function openPage() {
   visit.sessionId = posthog.get_session_id();
 }
 
+// Foreground activity gives the SDK a chance to expire an idle session. If its ID
+// changes, start a new visit even though the tab is still on the same route.
 function resumeVisit() {
   if (!visit || !foreground()) return;
-  // get_session_id() is read-only. Ask the SDK to apply its idle timeout on actual
-  // foreground activity so an old tab can enter a new session before the first edit.
   const id = posthog.sessionManager?.checkAndGetSessionAndWindowId(false).sessionId;
   if (id && visit.sessionId !== id) {
     visit = undefined;
@@ -207,6 +226,9 @@ function visibility() {
   if (document.visibilityState === 'hidden') flush();
   else tick();
 }
+
+// Apply the stored consent on startup and whenever it changes. Opt-in starts the SDK
+// and visit listeners. Withdrawal stops tracking and clears local session and survey state.
 export function syncUsage() {
   const allowed = configured && getConsent() === 'allow';
   if (allowed === active) return;
@@ -245,6 +267,9 @@ export function syncUsage() {
 
 export interface Question { id: string; question: string; choices: string[] }
 let currentQuestionId: string | undefined;
+
+// Offer feedback once per consenting browser on a return session or after three
+// foreground minutes in the editor. Include time accrued since the last flush.
 export function surveyEligible() {
   if (!active || !visit || !foreground() || !surveyId || read(surveyKey)) return false;
   const state = session();
