@@ -145,6 +145,10 @@ correct/incorrect feedback, later-trial nested conditions, exhaustion, timeouts,
 RT origin, caching, blank/skipped states, and legacy behavior. It does not replace
 verification in a hosted Qualtrics survey.
 
+## Usage analytics
+
+The editor, data analysis tool and manual support opt-in usage statistics. See the [analytics guide](docs/analytics.md) for local setup, event definitions, and dashboard metrics.
+
 ## Deploying the existing SP-Builder site
 
 Source is maintained in `spbuilder-org/spbuilder`. The live site at
