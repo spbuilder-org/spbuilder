@@ -1,6 +1,6 @@
 # SP-Builder usage analytics
 
-The editor, data analysis tool and manual share one US PostHog project. Use the [production dashboard](https://us.posthog.com/project/755301/dashboard/2395071) for published site usage (`environment = prod`) and the [beta dashboard](https://us.posthog.com/project/755301/dashboard/2395370) for local development and testing (`environment = beta`). Each dashboard and its saved insights filter on their own environment. You can edit a beta insight independently of its production counterpart.
+The editor, data analysis tool and manual share one US PostHog project. The production dashboard measures published site usage (`environment = prod`). The beta dashboard measures local development and testing (`environment = beta`). Each dashboard has its own saved insights.
 
 ## Consent and collection
 
@@ -22,7 +22,7 @@ The payload allowlist excludes raw URLs, experiment text, stimulus URLs, filenam
 | `qsf_download_requested` | Click on a generated QSF link. Includes `started_from` (blank, example or imported), `mode`, `has_multi_pool`, `has_condition`, `page_count`, `pool_count` and `round_count`. A completed file transfer cannot be observed from the editor. |
 | `analysis_data_imported`, `analysis_completed` | Nonempty CSV loaded without parser errors, then a successful **Generate Results** action. These fire independently. |
 | `processed_data_download_requested` | **Download** on the Data tab requests the processed CSV. Each request counts once, including downloads before **Generate Results**. No file metadata or CSV content is sent. |
-| `survey shown`, `survey dismissed`, `survey sent` | Native PostHog survey events for the [optional feedback question](https://us.posthog.com/project/755301/surveys/01a201fb-7c1f-0000-c713-2c4075dd722d). The visitor can select one preset answer. |
+| `survey shown`, `survey dismissed`, `survey sent` | Native PostHog survey events for the optional feedback question. The visitor can select one preset answer. |
 
 The survey becomes eligible on a returning browser's second distinct session or after three foreground minutes in the editor in one session. Refreshes retain the current session. The card waits for a visible, focused page without an open dialog and is offered once per consenting browser profile on that origin. Survey response rate is unique submitters divided by unique viewers.
 
@@ -30,7 +30,7 @@ The survey becomes eligible on a returning browser's second distinct session or 
 
 The first row shows the current UTC calendar month to date as a number, alongside a six-month trend. Each point represents one calendar month, including the current partial month. **Monthly Page Visits** (PV) counts every `$pageview` across the editor, analysis tool and manual. **Monthly User Visits** (UV) counts each anonymous browser identity with a `$pageview` once per month across those routes.
 
-**Editor settings actions** counts each confirmed **Use Example Settings**, successful **Load**, and **Save** download request over the last 30 days. Repeated actions count separately. [View the chart](https://us.posthog.com/project/755301/insights/xs6WrWac)
+**Editor settings actions** counts each confirmed **Use Example Settings**, successful **Load**, and **Save** download request over the last 30 days. Repeated actions count separately.
 
 | Funnel | Ordered steps within a single session |
 | --- | --- |
@@ -44,4 +44,4 @@ The time table reports median and mean elapsed seconds for visits with an observ
 
 ## Build configuration
 
-Set `REACT_APP_POSTHOG_PROJECT_TOKEN` to the public project token, `REACT_APP_POSTHOG_REGION=us` and `REACT_APP_POSTHOG_SURVEY_ID=01a201fb-7c1f-0000-c713-2c4075dd722d` before running CRA. Use ignored `.env.development.local` for local development and `.env.production.local` or build environment variables for a release. Collection is enabled on localhost/loopback and the SP-Builder production hosts. Without a configured token and region, the app runs without analytics. OAuth credentials belong to maintainer tools only.
+Before running CRA, set `REACT_APP_POSTHOG_PROJECT_TOKEN` to your public project token and `REACT_APP_POSTHOG_REGION` to your project's region (`us` or `eu`). To enable the optional feedback question, set `REACT_APP_POSTHOG_SURVEY_ID` to the ID of your single-choice API survey. Use ignored `.env.development.local` for local development and `.env.production.local` or build environment variables for a release. Collection is enabled on localhost/loopback and the SP-Builder production hosts. Without a configured token and region, the app runs without analytics. OAuth credentials belong to maintainer tools only.
